@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#05070b">
+  <title>FOR MY GIRL :#</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #05070b;
+      color: #ffe6f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background: #05070b;
+      cursor: crosshair;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .caption {
+      position: fixed;
+      left: 50%;
+      bottom: clamp(30px, 8vh, 76px);
+      z-index: 1;
+      width: max-content;
+      max-width: calc(100vw - 40px);
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      animation: appear 1.5s ease both;
+    }
+
+    .love-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 1;
+      width: calc(100vw - 32px);
+      margin: 0;
+      transform: translate(-50%, -50%);
+      color: #f2b5d0;
+      font: 10px/1.5 -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 2px;
+      text-align: center;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 42px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-shadow: 0 0 28px #f28dbb88;
+    }
+
+    p {
+      margin: 10px 0 0;
+      color: #f2b5d0;
+      font: 11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translate(-50%, 12px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .caption { animation: none; }
+    }
+
+    @media (max-width: 600px) {
+      .caption {
+        width: calc(100vw - 32px);
+        max-width: none;
+        bottom: max(24px, calc(env(safe-area-inset-bottom) + 18px));
+      }
+
+      h1 { font-size: 28px; }
+
+      .love-message {
+        font-size: 8px;
+        letter-spacing: 1.5px;
+      }
+
+      p {
+        margin-top: 8px;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene" aria-label="Анимация розовых частиц и вспышек в форме сердца"></canvas>
+  <main class="love-message">люблю тебя очень очень родная :3<br>&lt;3</main>
+  <div class="caption" aria-hidden="true">
+    <p>Коснись экрана, чтобы зажечь</p>
+  </div>
+
+  <script>
+    const canvas = document.querySelector("#scene");
+    const context = canvas.getContext("2d");
+    const colors = ["#ffd3e5", "#ffb6d3", "#f48fbe"];
+    const floatParticles = [];
+    const burstParticles = [];
+    const FLOAT_COUNT = 140;
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+    let lastBurst = 0;
+
+    class Particle {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.size = type === "float" ? Math.random() * 1.7 + 0.45 : Math.random() * 2.4 + 0.8;
+        this.maxLife = type === "float" ? Math.random() * 260 + 180 : Math.random() * 70 + 55;
+        this.life = type === "float" ? Math.random() * this.maxLife : 0;
+
+        if (type === "float") {
+          this.vx = (Math.random() - 0.5) * 0.22;
+          this.vy = -Math.random() * 0.28 - 0.04;
+          this.phase = Math.random() * Math.PI * 2;
+        } else {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 2.3 + 0.65;
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+          this.maxLife *= 0.8 + Math.random() * 0.5;
+        }
+      }
+
+      update() {
+        this.life++;
+        if (this.type === "float") {
+          this.x += this.vx + Math.sin(this.life * 0.018 + this.phase) * 0.12;
+          this.y += this.vy;
+          if (this.y < -8) {
+            this.y = height + 8;
+            this.x = Math.random() * width;
+          }
+          if (this.x < -8) this.x = width + 8;
+          if (this.x > width + 8) this.x = -8;
+        } else {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vx *= 0.985;
+          this.vy *= 0.985;
+        }
+      }
+
+      draw() {
+        const progress = this.life / this.maxLife;
+        const fade = this.type === "float"
+          ? Math.min(1, this.life / 35, (this.maxLife - this.life) / 35)
+          : Math.sin(Math.PI * progress);
+        const alpha = Math.max(0, fade) * (this.type === "float" ? 0.72 : 0.95);
+        context.globalAlpha = alpha;
+        context.fillStyle = this.color;
+        context.shadowColor = this.color;
+        context.shadowBlur = this.type === "float" ? 10 : 17;
+        context.beginPath();
+        context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+
+    function resize() {
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
+
+    function spawnHeartBurst(x, y) {
+      const count = 140;
+      const heartScale = Math.min(25.2, width * 0.74 / 32, height * 0.82 / 34);
+      for (let i = 0; i < count; i++) {
+        const t = Math.random() * Math.PI * 2;
+        const heartX = 16 * Math.pow(Math.sin(t), 3);
+        const heartY = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        const particle = new Particle(x + heartX * heartScale, y + heartY * heartScale, "burst");
+        particle.vx += heartX * 0.025;
+        particle.vy += heartY * 0.025;
+        burstParticles.push(particle);
+      }
+    }
+
+    function animate(time) {
+      context.globalAlpha = 1;
+      context.shadowBlur = 0;
+      context.fillStyle = "rgba(5, 7, 11, 0.2)";
+      context.fillRect(0, 0, width, height);
+
+      if (time - lastBurst > 3600) {
+        spawnHeartBurst(width / 2, height * 0.43);
+        lastBurst = time;
+      }
+
+      for (const particle of floatParticles) {
+        particle.update();
+        particle.draw();
+      }
+
+      for (let i = burstParticles.length - 1; i >= 0; i--) {
+        const particle = burstParticles[i];
+        particle.update();
+        particle.draw();
+        if (particle.life >= particle.maxLife) burstParticles.splice(i, 1);
+      }
+
+      context.globalAlpha = 1;
+      context.shadowBlur = 0;
+      requestAnimationFrame(animate);
+    }
+
+    for (let i = 0; i < FLOAT_COUNT; i++) {
+      floatParticles.push(new Particle(Math.random() * window.innerWidth, Math.random() * window.innerHeight, "float"));
+    }
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("pointerdown", (event) => spawnHeartBurst(event.clientX, event.clientY));
+    resize();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
